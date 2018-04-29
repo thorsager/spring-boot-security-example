@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <!--/*@thymesVar id="name" type="java.lang.String"*/-->
-    <title th:text="'Hello, ' + ${name} +'!'"/>
+    <title th:text="'Hello, ' + ${name} +'!'"></title>
 </head>
 <body>
-<h1>Hello World!</h1>
+<!--/*@thymesVar id="name" type="java.lang.String"*/-->
+<h1 th:text="'Hello, '+${name}+'. This is the World!'"></h1>
 </body>
 </html>

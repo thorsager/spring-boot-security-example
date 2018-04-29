@@ -14,6 +14,7 @@ import java.util.Set;
 @Builder
 @Getter
 @Setter
+@ToString(exclude = "users")
 public class Role {
 	@Id
 	@GeneratedValue(strategy=GenerationType.AUTO)

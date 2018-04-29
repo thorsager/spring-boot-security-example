@@ -23,9 +23,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.security.Principal;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @SpringBootApplication
 @EnableJpaRepositories(considerNestedRepositories = true)
@@ -38,7 +37,9 @@ public class SecurityExampleApplication {
 
 
 	@Bean
-	CommandLineRunner demo(PasswordEncoder passwordEncoder, UserRepository userRepository, RoleRepository roleRepository, PrivilegeRepository privilegeRepository) {
+	CommandLineRunner demo(PasswordEncoder passwordEncoder, UserRepository userRepository,
+						   RoleRepository roleRepository, PrivilegeRepository privilegeRepository
+	) {
 		return args -> {
 
 			privilegeRepository.saveAll(
@@ -66,27 +67,67 @@ public class SecurityExampleApplication {
 					)
 			);
 
+			String pwd = pin();
+
+
 			userRepository.saveAll(
 					Arrays.asList(
 							User.builder()
-									.username("mit")
-									.password(passwordEncoder.encode("password"))
+									.username("john")
+									.password(passwordEncoder.encode(pwd))
 									.roles(setOf(roleRepository.findByName("ROLE_ADMIN")))
 									.build(),
 							User.builder()
 									.username("joe")
-									.password(passwordEncoder.encode("changeme"))
+									.password(passwordEncoder.encode(pwd))
 									.roles(setOf(roleRepository.findByName("ROLE_USER")))
 									.enabled(false)
 									.build(),
 							User.builder()
 									.username("jane")
-									.password(passwordEncoder.encode("secret"))
+									.password(passwordEncoder.encode(pwd))
 									.roles(setOf(roleRepository.findByName("ROLE_GUEST")))
 									.build()
 					)
 			);
+			User john = userRepository.findByUsername("john");
+			john.addToken(token());
+			john.addToken(token());
+
+			User jane = userRepository.findByUsername("jane");
+			jane.addToken(token());
+
+			User joe = userRepository.findByUsername("joe");
+			joe.addToken(token());
+			joe.getTokens().forEach(t -> t.setEnabled(false));
+
+			userRepository.saveAll(Arrays.asList(john, jane, joe));
+			System.out.println();
+			System.out.println("* Users created: " +
+					userRepository.findAll()
+							.stream()
+							.map(u -> String.format("%s(enabled=%s)", u.getUsername(), u.isEnabled()))
+							.collect(Collectors.joining(", "))
+			);
+			System.out.println("* Password for all users: " + pwd);
+
+
+			System.out.println("* Tokens created: \n" +
+					userRepository.findAll()
+							.stream()
+							.map(u ->
+									String.format("* - %s: %s",
+											u.getUsername(),
+											u.getTokens().stream()
+													.map(t -> String.format("%s(enabled=%s)", t.getToken(), t.isEnabled()))
+													.collect(Collectors.joining(", "))
+									)
+							).collect(Collectors.joining("\n"))
+			);
+			System.out.println();
+
 		};
+
 	}
 
 	@Bean
@@ -109,14 +150,15 @@ public class SecurityExampleApplication {
 		}
 	}
 
+	@SuppressWarnings({"SpringElInspection", "ELValidationInJSP"})
 	@RestController
-	@RequestMapping("/api")
-	public class ApiController {
+	@RequestMapping("/rest")
+	public class RestModelController {
 		private UserRepository userRepository;
 		private RoleRepository roleRepository;
 
 		@Autowired
-		ApiController(UserRepository userRepository, RoleRepository roleRepository) {
+		RestModelController(UserRepository userRepository, RoleRepository roleRepository) {
 			this.userRepository = userRepository;
 			this.roleRepository = roleRepository;
 		}
@@ -124,7 +166,7 @@ public class SecurityExampleApplication {
 
 		// https://docs.spring.io/spring-security/site/docs/4.0.1.RELEASE/reference/htmlsingle/#el-common-built-in
 		@GetMapping("/user")
-		@PreAuthorize("hasAuthority('PRIV_READ') and hasRole('ADMIN')")
+		@PreAuthorize("hasAuthority('PRIV_ALL') or hasRole('ADMIN')")
 		public Iterable<User> getAllUsers() {
 			return userRepository.findAll();
 		}
@@ -135,4 +177,38 @@ public class SecurityExampleApplication {
 		}
 	}
 
+	@SuppressWarnings({"SpringElInspection", "ELValidationInJSP"})
+	@RestController
+	@RequestMapping("/api")
+	public class ApiController {
+
+		@GetMapping("/time")
+		public String time() {
+			return new Date().toString();
+		}
+
+		@GetMapping("/timeAsLong")
+		@PreAuthorize("hasRole('ADMIN')")
+		public Long timeAsLong() {
+			return System.currentTimeMillis();
+		}
+
+	}
+
+	private static String token() {
+		return randomStr(10, 97, 122);
+	}
+
+	private static String pin() {
+		return randomStr(4, 48, 57);
+	}
+
+
+	static String randomStr(int length, int origin, int bound) {
+		return new Random()
+				.ints(length, origin, bound)
+				.mapToObj(Character::toChars)
+				.map(String::new)
+				.collect(Collectors.joining(""));
+	}
 }

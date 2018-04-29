@@ -8,7 +8,7 @@ import java.util.Set;
 
 @Entity
 @Table(name = "privileges")
-@ToString()
+@ToString(exclude = "roles")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

@@ -4,6 +4,7 @@ import lombok.*;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
+import java.util.HashSet;
 import java.util.Set;
 
 @Entity
@@ -35,4 +36,13 @@ public class User {
 	@ManyToMany
 	@JoinTable( name="user_roles", joinColumns = @JoinColumn(name="user_id"), inverseJoinColumns = @JoinColumn(name="role_id"))
 	Set<Role> roles;
+
+	@Builder.Default
+	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+	Set<AuthToken> tokens = new HashSet<>();
+
+	public void addToken(String tokenValue) {
+		this.tokens.add(new AuthToken(null, tokenValue, true, "test", this));
+	}
+
 }

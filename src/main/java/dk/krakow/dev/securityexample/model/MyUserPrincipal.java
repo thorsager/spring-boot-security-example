@@ -7,7 +7,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class MyUserPrincipal implements UserDetails {
 	private User user;
@@ -30,9 +29,6 @@ public class MyUserPrincipal implements UserDetails {
 				.flatMap(r->r.getPrivileges().stream())
 				.map(p->new SimpleGrantedAuthority(p.getName()))
 				.forEach(granted::add);
-
-		System.out.println(granted);
-
 		return granted;
 	}
 
